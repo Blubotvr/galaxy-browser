@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Galaxy</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#0b0d21;color:#e8eaff;font:14px 'Segoe UI',sans-serif;overflow:hidden}
+  body{display:flex;flex-direction:column}
+  button,select,input{font:inherit;color:inherit}
+  button{background:#1c2150;border:1px solid #3a3f8f;border-radius:8px;padding:6px 12px;cursor:pointer}
+  button:hover{background:#2a2f78;border-color:#4de1ff}
+  #top{display:flex;gap:6px;padding:6px;background:#0f1230;align-items:center}
+  #bar{flex:1;background:#141836;border:1px solid #3a3f8f;border-radius:16px;padding:7px 16px;outline:none;color:#fff}
+  #bar:focus{border-color:#4de1ff}
+  #tabs{display:flex;gap:2px;padding:6px 6px 0;background:#0f1230;overflow-x:auto}
+  .tab{display:flex;align-items:center;gap:8px;max-width:210px;min-width:90px;padding:8px 12px;cursor:pointer;
+    background:#141836;border-radius:8px 8px 0 0;white-space:nowrap}
+  .tab.active{background:#2a2f78;color:#4de1ff}
+  .tab .t{overflow:hidden;text-overflow:ellipsis;flex:1}
+  .tab .x{opacity:.6}.tab .x:hover{opacity:1;color:#ff6bd6}
+  #main{flex:1;display:flex;min-height:0}
+  #views{flex:1;position:relative;min-width:0}
+  #views webview{position:absolute;inset:0;display:none}
+  #views webview.active{display:flex}
+  .panel{display:none;flex-direction:column;gap:8px;padding:8px;background:#0f1230;width:300px}
+  .panel.open{display:flex}
+  #ai{width:420px}
+  #ai webview{flex:1;border-radius:8px;background:#fff}
+  select{background:#141836;border:1px solid #3a3f8f;border-radius:8px;padding:6px 10px}
+  select option{background:#141836}
+  h3{margin:0;color:#4de1ff;font-weight:600}
+  #list{flex:1;overflow:auto;background:#10132e;border:1px solid #2a2f78;border-radius:8px}
+  #list div{padding:7px 10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #list div:hover{background:#1c2150}#list div.sel{background:#3b2f9a}
+  .row{display:flex;gap:6px}.row button{flex:1}
+  label{display:flex;gap:8px;align-items:center}
+  input[type=range]{width:100%;accent-color:#8a5cff}
+  #status{padding:3px 10px;background:#0f1230;color:#9aa3ff;font-size:12px;min-height:22px}
+</style></head><body>
+<div id="top">
+  <button id="back">◀</button><button id="fwd">▶</button><button id="reload">⟳</button><button id="home">🏠</button>
+  <input id="bar" placeholder="Search the universe or enter a web address..." spellcheck="false">
+  <button id="plus">＋</button>
+  <button id="vpn">🛰 VPN: checking...</button>
+  <button id="aiBtn">✨ AI</button>
+  <button id="musicBtn">🎵 Music</button>
+</div>
+<div id="tabs"></div>
+<div id="main">
+  <div class="panel" id="music">
+    <h3>🎵 Search Music</h3>
+    <div id="list"></div>
+    <div class="row"><button id="addM">＋ Add music</button><button id="remM">Remove</button></div>
+    <div class="row"><button id="playM">▶ Play</button><button id="stopM">■ Stop</button></div>
+    <div>Volume</div><input type="range" id="vol" min="0" max="100" value="60">
+    <label><input type="checkbox" id="onSearch" checked> Play music when I search</label>
+    <label><input type="checkbox" id="onLoad"> Stop when results finish loading</label>
+  </div>
+  <div id="views"></div>
+  <div class="panel" id="ai">
+    <h3>✨ Galaxy AI</h3>
+    <select id="aiPick"></select>
+    <webview id="aiView" partition="galaxy-private"></webview>
+  </div>
+</div>
+<div id="status">Welcome to Galaxy 🌌</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const SEARCH = 'https://duckduckgo.com/?q=';
+const THEME = '&kae=d&k7=0b0d21&k8=e8eaff&k9=4de1ff&kaa=b78cff&kj=0f1230';   // DuckDuckGo dark-space colors
+const SPACE_CSS = `
+html{background:#05060f radial-gradient(ellipse at 50% 120%,#1b2050 0%,#0b0d21 55%,#05060f 100%) fixed !important}
+body{background:transparent !important;color:#e8eaff !important}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.85;
+  background-image:
+   radial-gradient(1.2px 1.2px at 20px 30px,#fff,transparent),radial-gradient(1px 1px at 90px 140px,#cfe3ff,transparent),
+   radial-gradient(1.5px 1.5px at 160px 70px,#fff,transparent),radial-gradient(1px 1px at 230px 200px,#ffd6f6,transparent),
+   radial-gradient(1.3px 1.3px at 310px 120px,#fff,transparent),radial-gradient(1px 1px at 60px 260px,#b8f1ff,transparent),
+   radial-gradient(1.4px 1.4px at 280px 290px,#fff,transparent);
+  background-size:340px 340px;animation:gxTwinkle 5s ease-in-out infinite alternate}
+@keyframes gxTwinkle{from{opacity:.45}to{opacity:1}}
+header,nav,main,aside,footer,section,li,ol,body>div,body>div>div,#header_wrapper,#web_content_wrapper,#links_wrapper{background-color:transparent !important}
+article{background:rgba(20,24,54,.55) !important;border:1px solid rgba(138,92,255,.28) !important;border-radius:14px !important;
+  backdrop-filter:blur(3px);transition:box-shadow .2s,border-color .2s}
+article:hover{border-color:#4de1ff !important;box-shadow:0 0 22px rgba(77,225,255,.25)}
+a{color:#4de1ff !important}a:visited{color:#b78cff !important}
+a:hover{text-shadow:0 0 10px rgba(77,225,255,.6)}
+h1,h2,h3{color:#fff !important;text-shadow:0 0 12px rgba(138,92,255,.55)}
+input,textarea,select{background:rgba(20,24,54,.88) !important;color:#fff !important;border:1px solid #3a3f8f !important;
+  border-radius:24px !important;box-shadow:0 0 18px rgba(138,92,255,.3) !important}
+input:focus{border-color:#4de1ff !important}
+button{border-radius:20px !important}
+::selection{background:#8a5cff;color:#fff}
+::-webkit-scrollbar{width:10px;background:#0b0d21}::-webkit-scrollbar-thumb{background:#3a3f8f;border-radius:6px}
+`;
+const AI = { 'Claude': 'https://claude.ai/new', 'Gemini': 'https://gemini.google.com/app',
+             'Microsoft Copilot': 'https://copilot.microsoft.com', 'ChatGPT': 'https://chatgpt.com' };
+let cfg = {}, tabs = [], active = null, homeUrl = '', nextId = 1, tracks = [], tIdx = 0, aiLoaded = false;
+const audio = new Audio();
+const say = (m, ms = 4000) => { $('#status').textContent = m; if (ms) setTimeout(() => { if ($('#status').textContent === m) $('#status').textContent = ''; }, ms); };
+
+// ---------- tabs ----------
+function newTab(url) {
+  const id = nextId++;
+  const wv = document.createElement('webview');
+  wv.setAttribute('partition', 'galaxy-private');
+  wv.setAttribute('allowpopups', '');
+  $('#views').appendChild(wv);
+  const el = document.createElement('div');
+  el.className = 'tab';
+  el.innerHTML = '<span class="t">New Tab</span><b class="x">×</b>';
+  $('#tabs').appendChild(el);
+  const tab = { id, wv, el, ready: false };
+  tabs.push(tab);
+  el.addEventListener('click', () => activate(tab));
+  el.querySelector('.x').addEventListener('click', (e) => { e.stopPropagation(); closeTab(tab); });
+  wv.addEventListener('dom-ready', () => {
+    tab.ready = true; if (tab === active) syncBar();
+    try { if (/(^|\.)duckduckgo\.com$/.test(new URL(wv.getURL()).hostname)) wv.insertCSS(SPACE_CSS); } catch (_) {}
+  });
+  wv.addEventListener('page-title-updated', (e) => { el.querySelector('.t').textContent = e.title || 'New Tab'; });
+  wv.addEventListener('did-navigate', () => syncBar());
+  wv.addEventListener('did-navigate-in-page', () => syncBar());
+  wv.addEventListener('did-start-navigation', (e) => {
+    if (e.isMainFrame && !e.isInPlace && e.url.startsWith(SEARCH) && $('#onSearch').checked) startMusic();
+  });
+  wv.addEventListener('did-stop-loading', () => { if (tab === active && $('#onLoad').checked) stopMusic(); });
+  wv.src = url || homeUrl;
+  activate(tab);
+  return tab;
+}
+function activate(tab) {
+  active = tab;
+  tabs.forEach((t) => { t.wv.classList.toggle('active', t === tab); t.el.classList.toggle('active', t === tab); });
+  syncBar();
+}
+function closeTab(tab) {
+  const i = tabs.indexOf(tab);
+  tabs.splice(i, 1); tab.wv.remove(); tab.el.remove();
+  if (!tabs.length) newTab(); else if (active === tab) activate(tabs[Math.max(0, i - 1)]);
+}
+function syncBar() {
+  if (!active || !active.ready) return;
+  try { const u = active.wv.getURL(); $('#bar').value = u.startsWith(homeUrl) ? '' : u; } catch (_) {}
+}
+function go() {
+  let t = $('#bar').value.trim();
+  if (!t || !active) return;
+  const isSearch = !/^(https?|file):\/\//i.test(t) && (/\s/.test(t) || (!t.includes('.') && !t.startsWith('localhost')));
+  if (isSearch) active.wv.loadURL(SEARCH + encodeURIComponent(t) + THEME);
+  else active.wv.loadURL(/^(https?|file):\/\//i.test(t) ? t : 'https://' + t);
+}
+$('#bar').addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
+$('#back').onclick = () => active && active.ready && active.wv.canGoBack() && active.wv.goBack();
+$('#fwd').onclick = () => active && active.ready && active.wv.canGoForward() && active.wv.goForward();
+$('#reload').onclick = () => active && active.ready && active.wv.reload();
+$('#home').onclick = () => active && active.wv.loadURL(homeUrl);
+$('#plus').onclick = () => newTab();
+document.addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 't') newTab();
+  if (e.ctrlKey && e.key === 'w' && active) closeTab(active);
+  if (e.ctrlKey && e.key === 'l') { $('#bar').focus(); $('#bar').select(); }
+  if (e.key === 'F5' && active && active.ready) active.wv.reload();
+});
+
+// ---------- VPN ----------
+function setVpn(s) {
+  $('#vpn').textContent = { ready: '🛰 VPN: open Proton', missing: '🛰 VPN: get Proton (free)', installing: '🛰 VPN: installing...' }[s] || '🛰 VPN';
+}
+$('#vpn').onclick = async () => { $('#vpn').textContent = '🛰 VPN: working...'; setVpn(await galaxy.vpnToggle()); };
+
+// ---------- AI ----------
+Object.keys(AI).forEach((n) => $('#aiPick').add(new Option(n, n)));
+$('#aiPick').onchange = () => { $('#aiView').src = AI[$('#aiPick').value]; };
+$('#aiBtn').onclick = () => {
+  $('#ai').classList.toggle('open');
+  if ($('#ai').classList.contains('open') && !aiLoaded) { aiLoaded = true; $('#aiView').src = AI[$('#aiPick').value]; }
+};
+
+// ---------- music ----------
+$('#musicBtn').onclick = () => $('#music').classList.toggle('open');
+function renderList() {
+  const l = $('#list'); l.innerHTML = '';
+  tracks.forEach((t, i) => {
+    const d = document.createElement('div');
+    d.textContent = t.name; d.className = i === tIdx ? 'sel' : '';
+    d.onclick = () => { tIdx = i; renderList(); };
+    d.ondblclick = () => startMusic(i, true);
+    l.appendChild(d);
+  });
+}
+function startMusic(i, force) {
+  if (!tracks.length) return say('Add some music first (🎵 Music panel).');
+  if (!force && !audio.paused) return;
+  if (i !== undefined) tIdx = i;
+  audio.src = tracks[tIdx].url; audio.play().catch(() => {}); renderList();
+}
+function stopMusic() { audio.pause(); audio.currentTime = 0; }
+audio.addEventListener('ended', () => { if (tracks.length) startMusic((tIdx + 1) % tracks.length, true); });
+$('#playM').onclick = () => startMusic(tIdx, true);
+$('#stopM').onclick = stopMusic;
+$('#vol').oninput = () => { audio.volume = $('#vol').value / 100; save(); };
+$('#addM').onclick = async () => {
+  for (const t of await galaxy.addMusic()) if (!tracks.some((x) => x.path === t.path)) tracks.push(t);
+  renderList(); save();
+};
+$('#remM').onclick = () => { if (tracks[tIdx]) { tracks.splice(tIdx, 1); tIdx = 0; renderList(); save(); } };
+$('#onSearch').onchange = $('#onLoad').onchange = () => save();
+function save() {
+  galaxy.saveConfig({ tracks, onSearch: $('#onSearch').checked, onLoad: $('#onLoad').checked, volume: +$('#vol').value });
+}
+
+// ---------- start ----------
+(async () => {
+  homeUrl = await galaxy.homeUrl();
+  cfg = await galaxy.loadConfig();
+  tracks = cfg.tracks || [];
+  $('#onSearch').checked = cfg.onSearch !== false;
+  $('#onLoad').checked = !!cfg.onLoad;
+  $('#vol').value = cfg.volume ?? 60; audio.volume = $('#vol').value / 100;
+  renderList();
+  galaxy.onOpenTab((u) => newTab(u));
+  galaxy.onStatus((m) => say(m, 9000));
+  galaxy.onStatus((m) => say(m, 9000));
+  newTab();
+  setVpn(await galaxy.vpnStatus());
+})();
+</script></body></html>

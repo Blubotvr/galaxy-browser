@@ -1,0 +1,16 @@
+{
+  "name": "galaxy",
+  "version": "1.0.0",
+  "description": "Galaxy - a space-themed browser",
+  "main": "main.js",
+  "author": "Galaxy",
+  "scripts": { "start": "electron .", "dist": "electron-builder --win portable" },
+  "devDependencies": { "electron": "33.2.1", "electron-builder": "25.1.8" },
+  "build": {
+    "appId": "com.galaxy.browser",
+    "productName": "Galaxy",
+    "files": ["main.js", "preload.js", "index.html", "home.html", "splash.js", "icon.png", "package.json"],
+    "win": { "target": "portable", "icon": "build/icon.ico", "signAndEditExecutable": false },
+    "portable": { "artifactName": "Galaxy.exe" }
+  }
+}

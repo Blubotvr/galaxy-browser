@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Galaxy</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;font-family:'Segoe UI',sans-serif;
+    background:radial-gradient(ellipse at bottom,#1b2050 0%,#05060f 70%);color:#fff}
+  canvas{position:absolute;inset:0}
+  .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  h1{font-size:clamp(48px,9vw,96px);letter-spacing:.25em;margin:0 0 0 .25em;
+    background:linear-gradient(90deg,#4de1ff,#8a5cff,#ff6bd6);-webkit-background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 18px #8a5cff)}
+  form{width:min(720px,88vw);margin-top:34px}
+  input{width:100%;box-sizing:border-box;padding:16px 26px;font-size:18px;color:#fff;
+    background:rgba(20,24,54,.85);border:1px solid #3a3f8f;border-radius:32px;outline:none;
+    box-shadow:0 0 28px rgba(138,92,255,.35);cursor:pointer;transition:border-color .15s}
+  input:focus{border-color:#4de1ff}
+  input::placeholder{color:#9aa3ff;opacity:1}
+  .hint{margin-top:14px;color:#6f78d6;font-size:13px;letter-spacing:.08em}
+</style></head><body>
+<canvas id="c"></canvas>
+<div class="c">
+  <h1>GALAXY</h1>
+  <form id="f" autocomplete="off">
+    <input id="q" type="text" spellcheck="false" autofocus>
+    <div class="hint" id="hint"></div>
+  </form>
+</div>
+<script src="splash.js"></script>
+<script>
+  const q = document.getElementById('q');
+  q.placeholder = GalaxySplash.next();
+  q.addEventListener('click', () => { q.placeholder = GalaxySplash.next(); });   // new message every click
+  document.getElementById('hint').textContent =
+    'CLICK THE BAR FOR A NEW MESSAGE  \u2022  ' + GalaxySplash.total.toLocaleString() + '+ POSSIBLE MESSAGES';
+  document.getElementById('f').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const t = q.value.trim();
+    if (!t) return;
+    const isUrl = /^https?:\/\//i.test(t) || (!/\s/.test(t) && /\.[a-z]{2,}/i.test(t));
+    location.href = isUrl ? (/^https?:\/\//i.test(t) ? t : 'https://' + t)
+                          : 'https://duckduckgo.com/?q=' + encodeURIComponent(t) + '&kae=d&k7=0b0d21&k8=e8eaff&k9=4de1ff&kaa=b78cff&kj=0f1230';
+  });
+  const c = document.getElementById('c'), x = c.getContext('2d'); let W, H;
+  function rs(){ W = c.width = innerWidth; H = c.height = innerHeight; } rs(); onresize = rs;
+  const S = Array.from({length:350}, () => ({x:(Math.random()-.5)*W*2, y:(Math.random()-.5)*H*2, z:Math.random()*W}));
+  (function f(){ x.clearRect(0,0,W,H);
+    for (const s of S){ s.z -= 2; if (s.z <= 0){ s.z = W; s.x = (Math.random()-.5)*W*2; s.y = (Math.random()-.5)*H*2; }
+      const k = 300/s.z, px = s.x*k + W/2, py = s.y*k + H/2, r = Math.max(.2, (1-s.z/W)*2.6);
+      x.fillStyle = 'rgba(200,220,255,' + (1-s.z/W) + ')'; x.beginPath(); x.arc(px,py,r,0,7); x.fill(); }
+    requestAnimationFrame(f); })();
+</script></body></html>
